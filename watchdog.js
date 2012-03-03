@@ -4,7 +4,6 @@ var util  = require('util'),
     url   = require('url'),
     spawn = require('child_process').spawn,
     port       = process.env.PORT || 8088,
-    verbose    = true,
     version    = '0.0.1',
     server     = null,
     appName    = getAppName(process.argv[1]),
@@ -14,11 +13,10 @@ var util  = require('util'),
     logstream  = fs.createWriteStream(appName + '.log');
 
 function getAppName(name) {
-    var regex_  = /.*\/(.*)\.js$/;
-    var capture = name.match(regex_);
+    var regex  = /.*\/(.*)\.js$/;
+    var capture = name.match(regex);
     return capture[1];
 }
-
 
 function log(msg) {
     var message = appName + ': ' + msg;
@@ -26,8 +24,27 @@ function log(msg) {
     logstream.write(message);
 }
 
+/**
+ * [ {
+ *     "name":"freeswitch",
+ *     "description":"A service that restart freeswitch if it dies",
+ *     "options":{ "cwd": "/usr/local/freeswitch",
+ *                 "env": { 
+ *                          "DEBUG":true
+ *                        },
+ *                 "customFds": [-1, -1, -1]
+ *               },
+ *     "command":"/usr/local/freeswitch/bin/freeswitch",
+ *     "arguments":["-waste","-hp"],
+ *     "logDirectory":"/var/log",
+ *     "keepalive":true,
+ *     "state":"enable"
+ *   }
+ * ]
+ */
+
 function loadConfig(/*curr, prev*/) {
-    log('Updating rules [' + configfile + ']');
+    log('loading configuration file [' + configfile + ']');
     fs.readFile(configfile, function (err, data) {
         if (err) {
             log('ERROR reloading ' + configfile + ' >>>>> ' + JSON.stringify(err) + ' <<<<< IGNORING UPDATE');
@@ -43,25 +60,6 @@ function loadConfig(/*curr, prev*/) {
 
 log('Reading ' + configfile);
 updateProcessesState(fs.readFileSync(configfile));
-
-
-/**
- * [ {
- *     'name':'mongod',
- *     'description':'MongoDB server',
- *     'options':{ 'cwd': '/home/root/data',
- *                 'env': { 'NODE_ENVIRONMENT=PRODUCTION',
- *                          'DEBUG=true'
- *                        },
- *                 'customFds': [-1, -1, -1]
- *               },
- *     'command':'node',
- *     'logDirectory':'/var/log',
- *     'keepalive':true,
- *     'state':'automatic'
- *   }
- * ]
- */
  
 function updateProcessesState(data) {
     var i;
@@ -88,7 +86,7 @@ server = http.createServer(function(req, res){
     var path  = url.parse(req.url).pathname;
     var query = url.parse(req.url, true).query;
     var clientIPAddress = req.headers['x-forwarded-for'] === undefined ? req.connection.remoteAddress : (req.headers['x-forwarded-for'] + '/' +req.connection.remoteAddress);
-// Terminate the server
+
     if (path.indexOf('/shutdown') === 0 && clientIPAddress == '127.0.0.1') {
         log('SHUTING DOWN NODE-WATCHDOG');
         for (var i = config.length ; i >= 0 ; --i) {
@@ -134,7 +132,6 @@ server = http.createServer(function(req, res){
         obj.status = 'FAILED';
         obj.message = 'Invalid request ' + req.url;
         res.write(JSON.stringify(obj));
-        res.write('{"application":' + appName + ',"version":"' + version + '","message":"Invalid request ' + req.url + '","status":"FAILED"}');
         res.end();
     }
 }).listen(port);
