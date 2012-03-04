@@ -20,11 +20,12 @@ process.on('exit', function (code) {
     shutdown();
 });
 
+/*
 process.on('uncaughtException', function (err) {
     log('EVENT:uncaughtException [' + err + '] --- SHUTING DOWN NODE-WATCHDOG');
     process.exit(-1);
 });
-
+*/
 process.on('SIGHUP', function () {
     log('EVENT:SIGHUP --- SHUTING DOWN NODE-WATCHDOG');
     process.exit(-1);
@@ -282,20 +283,44 @@ server = http.createServer(function(req, res){
         res.write(JSON.stringify(obj));
         res.end();
     } else if (path.indexOf('/status') === 0) {
-        res.writeHead(200, {"Content-Type": "application/json"});
-        res.write(JSON.stringify(statusProcess(query.name)));
+        log('HTTP STATUS ' + query.name);
+        if (query.name) {
+            res.writeHead(200, {"Content-Type": "application/json"});
+            res.write(JSON.stringify(statusProcess(query.name)));
+        } else {
+            res.writeHead(404, {"Content-Type": "application/json"});
+            obj.status = 'FAILED';
+            obj.message = 'Invalid request ' + req.url;
+            res.write(JSON.stringify(obj));
+        }
         res.end();
     } else if (path.indexOf('/start') === 0) {
-        res.writeHead(200, {"Content-Type": "application/json"});
-        var daemon = getDaemon(query.name);
-        if (daemon) {
-            daemon.state = 'enable';
+        log('HTTP START ' + query.name);
+        if (query.name) {
+            res.writeHead(200, {"Content-Type": "application/json"});
+            var daemon = getDaemon(query.name);
+            if (daemon) {
+                daemon.state = 'enable';
+            }
+            res.write(JSON.stringify(startProcess(query.name)));
+        } else {
+            res.writeHead(404, {"Content-Type": "application/json"});
+            obj.status = 'FAILED';
+            obj.message = 'Invalid request ' + req.url;
+            res.write(JSON.stringify(obj));
         }
-        res.write(JSON.stringify(startProcess(query.name)));
         res.end();
     } else if (path.indexOf('/stop') === 0) {
-        res.writeHead(200, {"Content-Type": "application/json"});
-        res.write(JSON.stringify(terminateProcess(query.name)));
+        log('HTTP STOP ' + query.name);
+        if (query.name) {
+            res.writeHead(200, {"Content-Type": "application/json"});
+            res.write(JSON.stringify(terminateProcess(query.name)));
+        } else {
+            res.writeHead(404, {"Content-Type": "application/json"});
+            obj.status = 'FAILED';
+            obj.message = 'Invalid request ' + req.url;
+            res.write(JSON.stringify(obj));
+        }
         res.end();
     } else if (path.indexOf('/favicon.ico') === 0) {
         res.writeHead(404, {"Content-Type": "text/html"});
@@ -332,12 +357,12 @@ function statusProcess(name_or_daemon) {
 function terminateProcess(name_or_daemon) {
     var obj = {'application':appName, 'version' : version};
     var daemon = getDaemon(name_or_daemon);
-    if (daemon && daemon.childInfo !== undefined && daemon.childInfo !== null) {
+    if (daemon && daemon.runtime && daemon.runtime.childInfo) { // !== undefined && daemon.runtime.childInfo !== null) {
         log('terminateProcess ' + daemon.name);
-        daemon.state = 'stopped';
+        daemon.state = 'stop';
         daemon.runtime.state = 'terminating';
         // SIGHUP:1, SIGQUIT:3, SIGABRT:6, SIGKILL:9, SIGTERM:15
-        daemon.childInfo.kill('SIGHUP');
+        daemon.runtime.childInfo.kill('SIGHUP');
         obj.status = 'OK';
         obj.message = 'Sent SIGUP to ' + daemon.name;
         // TODO: Should set a timer to verify if it died
@@ -350,63 +375,65 @@ function terminateProcess(name_or_daemon) {
 function startProcess(name_or_daemon) {
     var obj = {'application':appName, 'version' : version};
     var daemon = getDaemon(name_or_daemon);
+    if (!daemon) return;
     
-    if (daemon && (daemon.childInfo === undefined || daemon.childInfo === null)) {
+    if (!daemon.runtime) daemon.runtime = {};
+    if (daemon && (daemon.runtime.childInfo === undefined || daemon.runtime.childInfo === null)) {
         log('Spawning "' + daemon.name + '"');
         obj.status = 'OK';
         if (daemon.runtime === undefined)
             daemon.runtime = {};
         daemon.runtime.epoch = new Date().getTime();
         daemon.runtime.logstream  = fs.createWriteStream(daemon.logDirectory + '/' + daemon.name + '.log');
-        daemon.childInfo = spawn(daemon.command, daemon['arguments'], daemon.options);
+        daemon.runtime.childInfo = spawn(daemon.command, daemon['arguments'], daemon.options);
         daemon.runtime.state = 'running';
-        daemon.childInfo.on('exit', function (code, signal) {
+        daemon.runtime.childInfo.on('exit', function (code, signal) {
             var epoch = new Date().getTime();
             
             daemon.runtime.exitCode = code === undefined ? 0 : code;
-            
-            // 1) Check if the daemon has forked and becomes unmonitored.
-            if (code !== undefined && code === 0 && epoch - daemon.runtime.epoch < 1000 * 60) {
-                log(daemon.name + 'Exitied after ' + (epoch - daemon.runtime.epoch) / 1000 + ' second(s), with a code of ' + code + ', assuming a successful fork()');
-                daemon.runtime.state = 'forked';
-                return;
-            }
-            // 2) Check if the process constantly crash and respawn too quickly.
-            if (epoch - daemon.runtime.epoch < 1000 * 60 * 5) { // less than 5 minutes
-                // 2.1) it's the first time, we will try in 10 seconds to restart it.
-                if (daemon.runtime.delay === undefined) {
-                    daemon.runtime.delay = 1000 * 10; // 10 seconds;
-                    log(daemon.name + ' crashed for the first time, we will restart it in ' + (daemon.runtime.delay /1000) + ' seconds');
-                } else {
-                // 2.2) Ok, it is not the first time, lets double the time we
-                //      wait before restarting it.
-                    daemon.runtime.delay *= 2; // avoid process respawning too rapidly
-                    log(daemon.name + ' crashed again in less than five minutes, we will restart it in ' + (daemon.runtime.delay /1000) + ' seconds');
+            if (daemon.state == 'enable' && daemon.keepalive) {
+                // 1) Check if the daemon has forked and becomes unmonitored.
+                if (code !== undefined && code === 0 && epoch - daemon.runtime.epoch < 1000 * 60) {
+                    log(daemon.name + 'Exitied after ' + (epoch - daemon.runtime.epoch) / 1000 + ' second(s), with a code of ' + code + ', assuming a successful fork()');
+                    daemon.runtime.state = 'forked';
+                    return;
                 }
-            } else {
-            // 3) Ok, it crashed after more than 5 minutes, we will restrart it
-            //    in one second.
-                daemon.runtime.delay = 1000 * 1; // 1 second
-                log(daemon.name + ' crashed after more than five minutes, we will restart it in ' + (daemon.runtime.delay /1000) + ' second(s)');
-            }
-            
-            // 4) Let's reset the time stamp at which it was started
-            daemon.runtime.epoch = epoch;
-            daemon.runtime.state = signal === undefined ? 'crash' : 'signal';
-            daemon.runtime.logstream.write('EXIT: ' + daemon.runtime.exitCode);
-            daemon.runtime.logstream = null;
-            daemon.childInfo = null;
-            if (daemon.keepalive && daemon.state == 'enable') {
+                // 2) Check if the process constantly crash and respawn too quickly.
+                if (epoch - daemon.runtime.epoch < 1000 * 60 * 5) { // less than 5 minutes
+                    // 2.1) it's the first time, we will try in 10 seconds to restart it.
+                    if (daemon.runtime.delay === undefined) {
+                        daemon.runtime.delay = 1000 * 10; // 10 seconds;
+                        log(daemon.name + ' crashed for the first time, we will restart it in ' + (daemon.runtime.delay /1000) + ' seconds');
+                    } else {
+                    // 2.2) Ok, it is not the first time, lets double the time we
+                    //      wait before restarting it.
+                        daemon.runtime.delay *= 2; // avoid process respawning too rapidly
+                        log(daemon.name + ' crashed again in less than five minutes, we will restart it in ' + (daemon.runtime.delay /1000) + ' seconds');
+                    }
+                } else {
+                // 3) Ok, it crashed after more than 5 minutes, we will restrart it
+                //    in one second.
+                    daemon.runtime.delay = 1000 * 1; // 1 second
+                    log(daemon.name + ' crashed after more than five minutes, we will restart it in ' + (daemon.runtime.delay /1000) + ' second(s)');
+                }
+                
+                // 4) Let's reset the time stamp at which it was started
+                daemon.runtime.epoch = epoch;
+                
+                // 5) Throttle it!
                 setTimeout(function() {
                     updateProcessState(daemon);
                 }, daemon.runtime.delay);
             }
+            daemon.runtime.state = signal === undefined ? 'crash' : 'signal';
+            daemon.runtime.logstream = null;
+            daemon.runtime.childInfo = null;
        });
-        daemon.childInfo.stdout.on('data', function (data) {
-            if (daemon.childInfo && daemon.childInfo.logstream) daemon.runtime.logstream.write('STDOUT: ' + data + '\n');
+        daemon.runtime.childInfo.stdout.on('data', function (data) {
+            if (daemon.runtime.childInfo && daemon.runtime.childInfo.logstream) daemon.runtime.logstream.write('STDOUT: ' + data + '\n');
         });
-        daemon.childInfo.stderr.on('data', function (data) {
-            if (daemon.childInfo && daemon.childInfo.logstream) daemon.runtime.logstream.write('STDERR: ' + data + '\n');
+        daemon.runtime.childInfo.stderr.on('data', function (data) {
+            if (daemon.runtime.childInfo && daemon.runtime.childInfo.logstream) daemon.runtime.logstream.write('STDERR: ' + data + '\n');
         });
     }
     return obj;
