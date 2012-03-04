@@ -1,8 +1,9 @@
-var util  = require('util'),
-    fs    = require('fs'),
-    http  = require('http'),
-    url   = require('url'),
-    spawn = require('child_process').spawn,
+var util     = require('util'),
+    fs       = require('fs'),
+    http     = require('http'),
+    url      = require('url'),
+    JSONUtil = require('./modules/JSONUtil.js').JSONUtil,
+    spawn    = require('child_process').spawn,
     port       = process.env.PORT || 8088,
     version    = '0.0.1',
     server     = null,
@@ -11,7 +12,8 @@ var util  = require('util'),
     newConfig  = {},
     config     = {},
     logstream  = fs.createWriteStream(appName + '.log');
-    
+
+
 if (process.argv.length === 4 && process.argv[2] == '--config')
     configfile = process.argv[3];
     
@@ -50,13 +52,13 @@ function loadConfig(/*curr, prev*/) {
     log('loading configuration file [' + configfile + ']');
     fs.readFile(configfile, function (err, data) {
         if (err) {
-            log('ERROR reloading ' + configfile + ' >>>>> ' + JSON.stringify(err) + ' <<<<< IGNORING UPDATE');
+            log('ERROR reloading ' + configfile + ' >>>>> ' + JSONUtil.stringify(err) + ' <<<<< IGNORING UPDATE');
             return;
         }
         try {
             updateProcessesState(data);
         } catch (exception) {
-            log('ERROR parsing ' + configfile + ' >>>>> ' + JSON.stringify(exception) + ' <<<<< IGNORING UPDATE');
+            log('ERROR parsing ' + configfile + ' >>>>> ' + JSONUtil.stringify(exception) + ' <<<<< IGNORING UPDATE');
         }
     });
 }
@@ -66,16 +68,16 @@ updateProcessesState(fs.readFileSync(configfile));
  
 function updateProcessesState(data) {
     var i;
-    log('updateProcessesState(' + data + ')');
     try {
         newConfig = JSON.parse(data);
+        log('updateProcessesState(' + JSONUtil.stringify(newConfig) + ')');
     } catch (exception) {
-        log('ERROR parsing ' + configfile + ' >>>>> ' + exception + ' <<<<< IGNORING UPDATE');
+        log('ERROR parsing ' + configfile + ' >>>>> ' + exception + ' <<<<< IGNORING UPDATE\n---------------------------\n' + data);
         return;
     }
     try {
         for (i = 0 ; i < newConfig.length ; ++i ) {
-            log ('updating ' + JSON.stringify(newConfig[i]));
+            log ('updating ' + JSONUtil.stringify(newConfig[i]));
             var daemon = getDaemon(newConfig[i].name);
             if (daemon) {
                 newConfig[i].runtime = daemon.runtime;
