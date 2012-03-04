@@ -11,7 +11,10 @@ var util  = require('util'),
     newConfig  = {},
     config     = {},
     logstream  = fs.createWriteStream(appName + '.log');
-
+    
+if (process.argv.length === 4 && process.argv[2] == '--config')
+    configfile = process.argv[3];
+    
 function getAppName(name) {
     var regex  = /.*\/(.*)\.js$/;
     var capture = name.match(regex);
@@ -66,15 +69,26 @@ function updateProcessesState(data) {
     log('updateProcessesState(' + data + ')');
     try {
         newConfig = JSON.parse(data);
+    } catch (exception) {
+        log('ERROR parsing ' + configfile + ' >>>>> ' + exception + ' <<<<< IGNORING UPDATE');
+        return;
+    }
+    try {
         for (i = 0 ; i < newConfig.length ; ++i ) {
             log ('updating ' + JSON.stringify(newConfig[i]));
+            var daemon = getDaemon(newConfig[i].name);
+            if (daemon) {
+                newConfig[i].runtime = daemon.runtime;
+            }
             updateProcessState(newConfig[i]);
         }
-    } catch (exception) {
-        log('ERROR parsing ' + configfile + ' >>>>> ' + JSON.stringify(exception) + ' <<<<< IGNORING UPDATE');
+    } catch (e) {
+        log('ERROR updating process ' + e + ' <<<<< IGNORING UPDATE');
+        newConfig = null;
         return;
     }
     config = newConfig;
+    newConfig = null;
 }
 
 log('Watching ' + configfile);
@@ -150,7 +164,7 @@ function statusProcess(name_or_daemon) {
     var obj = {'application':appName, 'version' : version};
     var daemon = getDaemon(name_or_daemon);
     if (daemon) {    
-        obj.state  = daemon.state;
+        obj.state  = daemon.runtime.state;
         obj.status = 'OK';
         obj.message = 'I have nothign to say to you';
         return obj;
@@ -164,8 +178,10 @@ function terminateProcess(name_or_daemon) {
     var obj = {'application':appName, 'version' : version};
     var daemon = getDaemon(name_or_daemon);
     if (daemon && daemon.childInfo !== undefined && daemon.childInfo !== null) {
-        daemon.state     = 'shutdown';
-        daemon.keepalive = false;
+        log('terminateProcess ' + daemon.name);
+        daemon.state = 'stopped';
+        daemon.runtime.state = 'terminating';
+        // SIGHUP:1, SIGQUIT:3, SIGABRT:6, SIGKILL:9, SIGTERM:15
         daemon.childInfo.kill('SIGHUP');
         obj.status = 'OK';
         obj.message = 'Sent SIGUP to ' + daemon.name;
@@ -180,36 +196,55 @@ function startProcess(name_or_daemon) {
     var obj = {'application':appName, 'version' : version};
     var daemon = getDaemon(name_or_daemon);
     
-    if (daemon && daemon.childInfo === undefined || daemon.childInfo === null) {
+    if (daemon && (daemon.childInfo === undefined || daemon.childInfo === null)) {
+        log('startProcess ' + daemon.name);
         obj.status = 'OK';
-        daemon.logstream  = fs.createWriteStream(daemon.logDirectory + '/' + daemon.name + '.log');
+        if (daemon.runtime === undefined)
+            daemon.runtime = {};
+        daemon.runtime.epoch = new Date().getTime();
+        daemon.runtime.logstream  = fs.createWriteStream(daemon.logDirectory + '/' + daemon.name + '.log');
         daemon.childInfo = spawn(daemon.command, daemon['arguments'], daemon.options);
-        daemon.childInfo.on('exit', function (code) {
-            log(daemon.name + ' exiting with status ' + code);
-            daemon.logstream.write('EXIT: ' + code + '\n');
-            daemon.logstream = null;
-            daemon.childInfo = null;
-            if (daemon.keepalive) {
-                // TODO: Should trottle
-                obj = updateProcessState(daemon);
+        daemon.runtime.state = 'running';
+        daemon.childInfo.on('exit', function (code, signal) {
+            var epoch = new Date().getTime();
+            if (epoch - daemon.runtime.epoch < 1000 * 60 * 5) { // less than 5 minutes
+                if (daemon.runtime.delay === undefined)
+                    daemon.runtime.delay = 1000 * 10; // 10 seconds;
+                else
+                    daemon.runtime.delay *= 2; // avoid process respawning too rapidly
             } else {
-                daemon.state = 'exitted with code ' + code;
+                daemon.runtime.delay = 1000 * 1; // 1 second
+            }
+            daemon.runtime.epoch = epoch;
+            daemon.runtime.exitCode = code === undefined ? 0 : code;
+            daemon.runtime.state = 'exitted with code ' + daemon.runtime.exitCode;
+            log(daemon.name + ' ' + daemon.runtime.state + (signal === undefined ? '' : ' with signal ' + signal));
+            daemon.runtime.logstream.write('EXIT: ' + daemon.runtime.exitCode + '\n');
+            daemon.runtime.logstream = null;
+            daemon.childInfo = null;
+            if (daemon.keepalive && daemon.state == 'enable') {
+                // TODO: Should trottle
+                
+                setTimeout(function() {
+                    updateProcessState(daemon);
+                }, daemon.runtime.delay);
             }
        });
         daemon.childInfo.stdout.on('data', function (data) {
-            daemon.logstream.write('STDOUT: ' + data);
+            if (daemon.childInfo && daemon.childInfo.logstream) daemon.runtime.logstream.write('STDOUT: ' + data);
         });
         daemon.childInfo.stderr.on('data', function (data) {
-            daemon.logstream.write('STDERR: ' + data);
+            if (daemon.childInfo && daemon.childInfo.logstream) daemon.runtime.logstream.write('STDERR: ' + data);
         });
     }
     return obj;
 }
 
 function updateProcessState(daemon) {
-    if (daemon.state == 'enable' || daemon.state == 'start') {
+    if (daemon.state == 'enable') {
         startProcess(daemon);
-    } else if (daemon.state == 'disable' || daemon.state == 'disabled' || daemon.state == 'stop' || daemon.sate == 'shutdown') {
+    } else if (daemon.state == 'disable' || daemon.state == 'disabled' || 
+               daemon.state == 'stop'    || daemon.state == 'stopped') {
         terminateProcess(daemon);
     }
 }
