@@ -67,11 +67,10 @@ var JSONUtil = function (options) {
         if (isObject || isArray) {
                 var child  = null;
                 var output = indent;
+                if (name !== '') output += '"' + name + '":';
                 if (isArray) {
-                    if (name !== '') output += name + ':';
                     output += '[';
                 } else {
-                    if (name !== '') output += '"' + name + '":';
                     output += '{';
                 }
                 output += $this.lf;
@@ -84,7 +83,7 @@ var JSONUtil = function (options) {
                                 child = '<Unable to Evaluate>';
                         }
                         if (typeOf(child) === 'Object' || typeOf(child) === 'Array') {
-                                output += stringify(child, item, indent, depth + 1, filter);
+                                output += stringify(child, (isObject ? item : null), indent, depth + 1, filter) + ',' + $this.lf;
                         } else if (typeOf(child) === 'Function') {
                                 if ($this.options.showMethod)
                                     output += indent + item + ': METHOD' + $this.lf;
@@ -104,7 +103,15 @@ var JSONUtil = function (options) {
                             output += ',' + $this.lf;
                         }
                 }
-                return output + savedIndent + (isArray ? '],' : '},') + $this.lf;
+                if (output.substr(output.length -1) === $this.lf)
+                    output = output.substr(0, output.length -1);
+                if (output.substr(output.length -1) === ',')
+                    output = output.substr(0, output.length -1);
+                output += $this.lf;
+                    
+                output += savedIndent + (isArray ? '],' : '},') + $this.lf;
+                output = output.substr(0,output.length -2);
+                return output;
         } else {
                 return obj;
         }
