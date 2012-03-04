@@ -2,7 +2,7 @@ var util     = require('util'),
     fs       = require('fs'),
     http     = require('http'),
     url      = require('url'),
-    JSONUtil = require('./modules/JSONUtil.js').JSONUtil,
+    JSONUtil = require('./modules/JSONUtil.js').JSONUtil(),
     spawn    = require('child_process').spawn,
     port       = process.env.PORT || 8088,
     version    = '0.0.1',
@@ -12,7 +12,7 @@ var util     = require('util'),
     newConfig  = {},
     config     = {},
     logstream  = fs.createWriteStream(appName + '.log');
-
+log(JSON.stringify(process.argv));log('\n'+JSONUtil.stringify(process.argv));
 
 if (process.argv.length === 4 && process.argv[2] == '--config')
     configfile = process.argv[3];
@@ -70,7 +70,9 @@ function updateProcessesState(data) {
     var i;
     try {
         newConfig = JSON.parse(data);
+        log('updateProcessesState(' + JSON.stringify(newConfig) + ')');
         log('updateProcessesState(' + JSONUtil.stringify(newConfig) + ')');
+        process.exit(1);
     } catch (exception) {
         log('ERROR parsing ' + configfile + ' >>>>> ' + exception + ' <<<<< IGNORING UPDATE\n---------------------------\n' + data);
         return;
