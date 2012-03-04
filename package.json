@@ -1,11 +1,21 @@
 {
   "name": "node-watchdog",
   "version": "0.0.1",
-  "description": "A watchdog to restart daemon when they die",
+  "description": "A watchdog to restart daemons when they die, with an HTTP interface",
+  "author": "Henri Bouvier",
+  "main": "watchdog",
+  "bin": { "watchdog": "./watchdog.js" },
+  "keywords": ["daemon", "service", "http", "watchdog"],
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:hbouvier/node-watchdog.git"
+  },
   "dependencies": {
     "JSONUtil": "latest"
   },
+  "devDependencies": {},
+  "optionalDependencies": {},
   "engines": {
-      "node": ">= 0.6.0"
+      "node": ">= 0.6.6 < 0.7.0"
   }
 }
