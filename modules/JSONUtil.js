@@ -1,10 +1,7 @@
-var JSONUtil = function () {
+var JSONUtil = function (options) {
     var $this = this;
     
-    this.maxDepth    = 10;
-    this.showMethod  = false;
-    this.tab         = '\t';
-    this.lf          = '\n';
+    this.options     = options || {maxDepth:10,showMethod:false,compact:false};
     
     function setMaxDepth(maxDepth)     { $this.maxDepth   = maxDepth; }
     function hideMethods()             { $this.showMethod = false;    }
@@ -13,10 +10,12 @@ var JSONUtil = function () {
         if (compact) {
             $this.tab = $this.lf = '';
         } else {
-            this.tab = '\t';
-            this.lf  = '\n';
+            $this.tab = '\t';
+            $this.lf  = '\n';
         }
     }
+
+    setCompactOutput(this.options.compact);
 
     /**
      * A more consistent version of 'typeof' that will return:
@@ -53,20 +52,22 @@ var JSONUtil = function () {
         indent = indent || $this.tab;
         depth  = depth  || 1;
         filter = filter || [];
-  
+
         indent = typeof indent === 'undefined' ? $this.tab : indent;
         depth  = typeof depth  === 'undefined' ? 1         : depth;
         
         if (filter.indexOf(name) !== -1) {
             return '';
         }
-        if (depth > $this.maxDepth) {
+        if (depth > $this.options.maxDepth) {
                 return indent + name + ': <Maximum Depth Reached>\n';
         }
-        if (typeOf(obj) === 'Object' || typeOf(obj) === 'Array') {
+        var isArray  = typeOf(obj) === 'Array';
+        var isObject = typeOf(obj) === 'Object';
+        if (isObject || isArray) {
                 var child  = null;
                 var output = indent;
-                if (typeOf(obj) === 'Array') {
+                if (isArray) {
                     if (name !== '') output += name + ':';
                     output += '[';
                 } else {
@@ -74,7 +75,7 @@ var JSONUtil = function () {
                     output += '{';
                 }
                 output += $this.lf;
-  
+                var savedIndent = indent;
                 indent += $this.tab;
                 for (var item in obj) {
                         try {
@@ -85,7 +86,7 @@ var JSONUtil = function () {
                         if (typeOf(child) === 'Object' || typeOf(child) === 'Array') {
                                 output += stringify(child, item, indent, depth + 1, filter);
                         } else if (typeOf(child) === 'Function') {
-                                if ($this.showMethod)
+                                if ($this.options.showMethod)
                                     output += indent + item + ': METHOD' + $this.lf;
                                 else if (obj.hasOwnProperty(item)) {
                                     var buffer = ("" + child).replace(/\n|\r|\s{2,}/g, ' ');
@@ -96,14 +97,14 @@ var JSONUtil = function () {
                                     output += indent + '"'+ item + '": ' + buffer + ',' + $this.lf;
                                 }
                         } else {
-                                output += indent + '"' + item + '": ';
-                                if (typeOf(child) === 'String')
-                                    output += '"' + child + '"';
-                                else output += child;
-                                output += ',' + $this.lf;
+                            output += indent + (isObject ? '"' + item + '": ' :'');
+                            if (typeOf(child) === 'String')
+                                output += '"' + child + '"';
+                            else output += child;
+                            output += ',' + $this.lf;
                         }
                 }
-                return output + indent + ( typeOf(obj) === 'Array' ? '],' : '},') + this.lf;
+                return output + savedIndent + (isArray ? '],' : '},') + $this.lf;
         } else {
                 return obj;
         }
@@ -116,7 +117,7 @@ var JSONUtil = function () {
         "showMethods"      : showMethods,
         "setCompactOutput" : setCompactOutput
     };
-}();
+};
 
 exports.JSONUtil = JSONUtil;
 
