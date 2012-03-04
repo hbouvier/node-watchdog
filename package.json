@@ -1,0 +1,11 @@
+{
+  "name": "node-watchdog",
+  "version": "0.0.1",
+  "description": "A watchdog to restart daemon when they die",
+  "dependencies": {
+    "JSONUtil": "latest"
+  },
+  "engines": {
+      "node": ">= 0.6.0"
+  }
+}
