@@ -1,6 +1,6 @@
 {
   "name": "node-watchdog",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A watchdog to restart daemons when they die, with an HTTP interface",
   "author": "Henri Bouvier",
   "main": "watchdog",
