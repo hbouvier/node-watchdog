@@ -3,7 +3,6 @@ var util     = require('util'),
     fs       = require('fs'),
     http     = require('http'),
     url      = require('url'),
-    JSONUtil = require('JSONUtil').JSONUtil(),
     spawn    = require('child_process').spawn,
     port       = process.env.PORT || 8088,
     version    = '0.0.1',
@@ -197,13 +196,13 @@ function loadConfig(/*curr, prev*/) {
     log('loading configuration file [' + configfile + ']');
     fs.readFile(configfile, function (err, data) {
         if (err) {
-            log('ERROR reloading ' + configfile + ' >>>>> ' + JSONUtil.stringify(err) + ' <<<<< IGNORING UPDATE');
+            log('ERROR reloading ' + configfile + ' >>>>> ' + util.inspect(err, true, null) + ' <<<<< IGNORING UPDATE');
             return;
         }
         try {
             updateProcessesState(data);
         } catch (exception) {
-            log('ERROR parsing ' + configfile + ' >>>>> ' + JSONUtil.stringify(exception) + ' <<<<< IGNORING UPDATE');
+            log('ERROR parsing ' + configfile + ' >>>>> ' + util.inspect(exception, true,null) + ' <<<<< IGNORING UPDATE');
         }
     });
 }
