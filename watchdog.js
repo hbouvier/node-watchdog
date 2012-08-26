@@ -5,12 +5,12 @@ var util     = require('util'),
     url      = require('url'),
     spawn    = require('child_process').spawn,
     port       = process.env.PORT || 8088,
-    version    = '0.0.2',
+    version    = '0.0.3',
     server     = null,
     appName    = getAppName(process.argv[1]),
-    configfile = '../config/'+appName+'.json',
+    configfile = __dirname + 'config/'+appName+'.json',
     config     = {},
-    logstream  = fs.createWriteStream(appName + '.log');
+    logstream  = fs.createWriteStream(__dirname + '/' + appName + '.log');
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -164,10 +164,16 @@ function getAppName(name) {
     return capture[1];
 }
 
+
 function log(msg) {
+    function zero(x) { return x < 10 ? '0' + x : x; }
     var message = appName + ': ' + msg;
     util.log(message);
-    logstream.write(message + '\n');
+
+    var now = new Date(),
+        timestamp = '' + now.getFullYear() + zero(now.getMonth() +1) + zero(now.getDate()) + 
+                    ' ' + zero(now.getHours()) + zero(now.getMinutes()) + zero(now.getSeconds());
+    logstream.write(timestamp + ' ' +message + '\n');
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -192,7 +198,7 @@ function log(msg) {
  * }
  */
 
-function loadConfig(/*curr, prev*/) {
+function loadConfig(callback) {
     log('loading configuration file [' + configfile + ']');
     fs.readFile(configfile, function (err, data) {
         if (err) {
@@ -201,8 +207,12 @@ function loadConfig(/*curr, prev*/) {
         }
         try {
             updateProcessesState(data);
+            if (callback)
+                callback(null);
         } catch (exception) {
             log('ERROR parsing ' + configfile + ' >>>>> ' + util.inspect(exception, true,null) + ' <<<<< IGNORING UPDATE');
+            if (callback)
+                callback(exception);
         }
     });
 }
@@ -293,6 +303,21 @@ server = http.createServer(function(req, res){
             res.write(JSON.stringify(obj));
         }
         res.end();
+    } else if (path.indexOf('/reload') === 0) {
+        loadConfig(function(err) {
+            if (err) {
+                res.writeHead(500, {"Content-Type": "application/json"});
+                obj.status = 'FAILED';
+                obj.message = util.inspect(err);
+                res.write(JSON.stringify(obj));
+            } else {
+                obj.status = 'OK';
+                obj.message = 'Configuration reloaded';
+                res.writeHead(200, {"Content-Type": "application/json"});
+                res.write(JSON.stringify(obj));
+            }
+            res.end();
+        });
     } else if (path.indexOf('/start') === 0) {
         log('HTTP START ' + query.name);
         if (query.name) {
