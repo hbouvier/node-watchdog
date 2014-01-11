@@ -198,7 +198,7 @@ function log(msg) {
  * }
  */
 
-function loadConfig(callback) {
+function loadConfig(event, filename, callback) {
     log('loading configuration file [' + configfile + ']');
     fs.readFile(configfile, function (err, data) {
         if (err) {
@@ -368,7 +368,7 @@ function statusProcess(name_or_daemon) {
     var obj = {'application':appName, 'version' : version};
     var daemon = getDaemon(name_or_daemon);
     if (daemon) {    
-        obj.state  = daemon.runtime.state;
+        obj.state  = daemon.runtime && daemon.runtime.state ? daemon.runtime.state : 'unknown';
         obj.status = 'OK';
         obj.message = 'I have nothign to say to you';
         return obj;
@@ -405,14 +405,13 @@ function startProcess(name_or_daemon) {
     if (daemon && (daemon.runtime.childInfo === undefined || daemon.runtime.childInfo === null)) {
         log('Spawning "' + daemon.name + '"');
         obj.status = 'OK';
-        if (daemon.runtime === undefined)
-            daemon.runtime = {};
         daemon.runtime.epoch = new Date().getTime();
         daemon.runtime.logstream  = fs.createWriteStream(daemon.logDirectory + '/' + daemon.name + '.log');
         daemon.runtime.childInfo = spawn(daemon.command, daemon['arguments'], daemon.options);
         daemon.runtime.state = 'running';
         daemon.runtime.childInfo.on('exit', function (code, signal) {
             var epoch = new Date().getTime();
+            if (!daemon.runtime) daemon.runtime = {};
             
             daemon.runtime.exitCode = code === undefined ? 0 : code;
             if (daemon.state == 'enable' && daemon.keepalive) {
