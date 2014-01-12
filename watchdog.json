@@ -1,0 +1,26 @@
+{
+    "processes" : {
+        "print-env":{
+            "description":"Display all the environment variables",
+            "options":{
+                "cwd": "/tmp/",
+                "env": {
+                    "SOME_VAR":"Watch Dog Was Here"
+                },
+                "customFds":[
+                    -1,
+                    -1,
+                    -1
+                ]
+            },
+            "command":"/bin/sh",
+            "arguments":[
+                "-c",
+                "env"
+            ],
+            "logDirectory":"/tmp",
+            "keepalive":false,
+            "enable":true
+        }
+    }
+}
