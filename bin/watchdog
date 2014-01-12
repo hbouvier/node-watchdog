@@ -66,15 +66,18 @@
     // If not, start as a Web Server. The server will provide both an HTML
     // frontend and a JSON Web Service.
     var watchdog = require(path.join(rootPath, "lib", "watchdog"));
-    pkgConfig.rootPath = rootPath;
-    pkgConfig.www      = path.join(rootPath, "/www/public");
-    pkgConfig.bodyparser = getAbsFilename(pkgConfig.bodyparser);
-    pkgConfig.routes = getAbsFilename(pkgConfig.routes);
-    pkgConfig.version = version;
+    // configure Tomahawk
+    pkgConfig.rootPath   = rootPath;
+    pkgConfig.headers    = [];
+    pkgConfig.www        = path.join(rootPath, "/www/public");
+    pkgConfig.bodyparser = path.join(rootPath, "lib/bodyparser");
+    pkgConfig.routes     = path.join(rootPath, "lib/routes");
+
+    pkgConfig.version    = version;
 	logger.log('debug', 'options=%j', pkgConfig, meta);
-    pkgConfig.meta     = meta;
-    pkgConfig.logger   = logger;
-    pkgConfig.watchdog = watchdog.start(pkgConfig, app);
+    pkgConfig.meta       = meta;
+    pkgConfig.logger     = logger;
+    pkgConfig.watchdog   = watchdog.start(pkgConfig, app);
 
     var app = require('tomahawk').create(pkgConfig).start();
 

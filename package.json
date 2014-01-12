@@ -2,7 +2,7 @@
     "author"      : "Henri Bouvier",
     "name"        : "node-watchdog",
     "description" : "A watchdog to restart daemons when they die, with an HTTP interface",
-    "version"     : "0.0.3",
+    "version"     : "0.0.4",
     "keywords": ["daemon", "service", "http", "watchdog"],
 
     "repository"  : {
@@ -33,9 +33,6 @@
         "context"    : "/",
         "ip"         : "127.0.0.1",
         "port"       : 8088,
-        "headers"    : [],
-        "bodyparser" : "lib/bodyparser",
-        "routes"     : "lib/routes",
         "processes" : {}
     }
 }
