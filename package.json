@@ -31,6 +31,7 @@
         "level"      : "verbose",
         "config"     : "watchdog.json",
         "context"    : "/",
+        "ip"         : "127.0.0.1",
         "port"       : 8088,
         "headers"    : [],
         "bodyparser" : "lib/bodyparser",
