@@ -1,20 +1,38 @@
 {
-  "name": "node-watchdog",
-  "version": "0.0.2",
-  "description": "A watchdog to restart daemons when they die, with an HTTP interface",
-  "author": "Henri Bouvier",
-  "main": "watchdog",
-  "bin": { "watchdog": "./watchdog.js" },
-  "keywords": ["daemon", "service", "http", "watchdog"],
-  "repository": {
-    "type": "git",
-    "url": "git@github.com:hbouvier/node-watchdog.git"
-  },
-  "dependencies": {
-  },
-  "devDependencies": {},
-  "optionalDependencies": {},
-  "engines": {
-      "node": ">= 0.6.6 < 0.7.0"
-  }
+    "author"      : "Henri Bouvier",
+    "name"        : "node-watchdog",
+    "description" : "A watchdog to restart daemons when they die, with an HTTP interface",
+    "version"     : "0.0.3",
+    "keywords": ["daemon", "service", "http", "watchdog"],
+
+    "repository"  : {
+        "type" : "git",
+        "url"  : "https://github.com/hbouvier/node-watchdog.git"
+    },
+    "dependencies"         : {
+        "tomahawk"     : "latest",
+        "winston"      : "latest",
+        "connect"      : "latest",
+        "node-options" : "latest"
+    },
+    "engines"              : {
+        "node" : ">= 0.10.0 < 0.11.0"
+    },
+    "main" : "./lib/watchdog.js",
+    "bin"  : {
+        "watchdog" : "./bin/watchdog"
+    },
+    "scripts": {
+        "start": "bin/watchdog"
+    },
+    "configuration"        : {
+        "name"       : "Watchdog",
+        "level"      : "verbose",
+        "config"     : "watchdog.json",
+        "context"    : "/",
+        "port"       : 8088,
+        "headers"    : [],
+        "bodyparser" : "lib/bodyparser",
+        "routes"     : "lib/routes"
+    }
 }

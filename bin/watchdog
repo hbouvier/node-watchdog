@@ -1,0 +1,105 @@
+#!/usr/bin/env node
+(function () {
+	var path      = require('path'),
+    	fs        = require('fs'),
+        opts      = require('node-options'),
+        rootPath  = path.join(path.dirname(fs.realpathSync(__filename)), '..'),
+    	watchdog  = require(path.join(rootPath, "lib", "watchdog.js")),
+        pkgConfig = JSON.parse(fs.readFileSync(path.join(rootPath, 'package.json'))).configuration,
+        version   = JSON.parse(fs.readFileSync(path.join(rootPath, 'package.json'))).version;
+
+    ///////////////////////////////////////////////////////////////////////////
+    //
+    pkgConfig = pkgConfig || {};
+
+    ///////////////////////////////////////////////////////////////////////////
+    //
+    pkgConfig.name     = process.env.NAME    || pkgConfig.name;
+    pkgConfig.config   = process.env.CONFIG  || pkgConfig.config;
+    pkgConfig.level    = process.env.LEVEL   || pkgConfig.level;
+    pkgConfig.port     = process.env.PORT    || pkgConfig.port;
+    pkgConfig.context  = process.env.CONTEXT || pkgConfig.context;
+
+    ///////////////////////////////////////////////////////////////////////////
+    //
+	overlayConfig(pkgConfig.config);
+
+    ///////////////////////////////////////////////////////////////////////////
+    //
+    // The "options" parameter is an object read from the package.json file.
+    // Every property of that object can be overwritten through the command
+    // line argument (e.g. --"property"=newValue)
+    var result = opts.parse(process.argv.slice(2), pkgConfig);
+	overlayConfig(pkgConfig.config);
+
+    ///////////////////////////////////////////////////////////////////////////
+    //
+    var winston  = require('winston'),
+		meta     = {
+            "module" : pkgConfig.name || "Watchdog",
+            "pid"    : process.pid
+        },
+        logger   = new (winston.Logger)({ transports: [
+            new (winston.transports.Console)({
+                "level"    : pkgConfig.level || "info",
+                "json"     : false,
+                "colorize" : true
+            })
+        ]});
+
+    ///////////////////////////////////////////////////////////////////////////
+    //
+    // If an argument was passed on the command line, but was not defined in
+    // the "configuration" property of the package.json, lets print the USAGE.
+    if (result.errors) {
+        usage(result.errors);
+        process.exit(-1);
+    }
+
+    if (result.args.length > 0) {
+        usage(result.args);
+        process.exit(-1);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    //
+    // If not, start as a Web Server. The server will provide both an HTML
+    // frontend and a JSON Web Service.
+    var watchdog = require(path.join(rootPath, "lib", "watchdog"));
+    pkgConfig.rootPath = rootPath;
+    pkgConfig.www      = path.join(rootPath, "public");
+    pkgConfig.bodyparser = getAbsFilename(pkgConfig.bodyparser);
+    pkgConfig.routes = getAbsFilename(pkgConfig.routes);
+    pkgConfig.version = version;
+	logger.log('debug', 'options=%j', pkgConfig, meta);
+    pkgConfig.meta     = meta;
+    pkgConfig.logger   = logger;
+    pkgConfig.watchdog = watchdog.start(pkgConfig, app);
+
+    var app = require('tomahawk').create(pkgConfig).start();
+
+    ///////////////////////////////////////////////////////////////////////////
+    //
+    function overlayConfig(fileName) {
+    	fileName = getAbsFilename(fileName);
+	    if (fileName && fs.existsSync(fileName)) {
+	    	var config = JSON.parse(fs.readFileSync(fileName));
+		    for (var opt in config) {
+		        pkgConfig[opt] = config[opt];
+		    }
+	    }
+	}
+	function getAbsFilename(filename) {
+		if (!filename || filename.charAt(0) === '/') return filename;
+		return path.join(process.cwd(), filename);
+	}
+
+    ///////////////////////////////////////////////////////////////////////////
+    //
+    function usage(errors) {
+        logger.log('error', 'USAGE: %s --name=Watchdog --level=silly|debug|verbose|info|warn|error --port=8080 --context=/ --config=config.json', meta.module, meta);
+        if (errors) {
+            logger.log('error', '       UNKNOWN ARGUMENTS: "%s"', errors.join('", "'), meta);
+        }
+    }
+}).call();
