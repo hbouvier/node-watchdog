@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html id="ng-app" ng-app="watchdogApplication" lang="en" xmlns:ng="http://angularjs.org">
+
+    <head>
+        <!-- =================== Bootstrap 3.0 ===================
+        -->
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="Watchdog">
+        <meta name="author" content="Henri Bouvier">
+
+        <title>Watchdog</title>
+        <script src="js/jquery-2.0.3.min.js"></script>
+        <link href="css/bootstrap.min.css" rel="stylesheet">
+
+        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries
+        -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+        <!-- =================== Bootstrap 3.0 ===================
+        -->
+
+        <!-- =================== Angular 1.0 ===================
+        -->
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <!--[if lte IE 8]>
+            <script src="http://cdn.jsdelivr.net/json3/3.2.6/json3.min.js"></script>
+        <![endif]-->
+        <!--[if lte IE 8]>
+            <script>
+                document.createElement('ng-include');
+                document.createElement('ng-pluralize');
+                document.createElement('ng-view');
+
+                // Optionally these for CSS
+                document.createElement('ng:include');
+                document.createElement('ng:pluralize');
+                document.createElement('ng:view');
+            </script>
+        <![endif]-->
+        <script src="js/angular.min.js"></script>
+        <script src="js/angular-route.min.js"></script>
+        <script src="js/angular-resource.min.js"></script>
+
+        <!-- =================== Angular 1.0 ===================
+        -->
+    </head>
+
+    <body ng-cloak>
+        <div class="navbar navbar-inverse navbar-fixed-top">
+            <div class="container">
+                <div class="navbar-brand" ng-disabled="true">Watchdog</div>
+            </div>
+        </div>
+        <br><br>
+
+        <div ng-view></div>
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="js/application/watchdog-application.js"></script>
+        <script src="js/services/watchdog-services.js"></script>
+        <script src="js/controllers/watchdog-controller.js"></script>
+    </body>
+</html>
+

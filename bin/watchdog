@@ -67,7 +67,7 @@
     // frontend and a JSON Web Service.
     var watchdog = require(path.join(rootPath, "lib", "watchdog"));
     pkgConfig.rootPath = rootPath;
-    pkgConfig.www      = path.join(rootPath, "public");
+    pkgConfig.www      = path.join(rootPath, "/www/public");
     pkgConfig.bodyparser = getAbsFilename(pkgConfig.bodyparser);
     pkgConfig.routes = getAbsFilename(pkgConfig.routes);
     pkgConfig.version = version;
