@@ -20,19 +20,16 @@ angular.module('watchdogServices', ['ngResource'])
         };
     })
     .factory('Process', function ($rootScope, $resource) {
-        return function (contentType) {
-            var impl = $resource(
-                $rootScope.baseAPIurl + '/process/:name?',
-                null,
-                {
-                    "get"    : { method : "GET"},
-                    "list"   : { method : "GET", isArray : true  }
-                }
-            );
-            return impl;
-        };
+        return $resource($rootScope.baseAPIurl + '/process/:name?', null, {
+            "list"    : { method : "GET", isArray : true  },
+            "get"     : { method : "GET", isArray : false },
+            "put"     : { method : "PUT" },
+            "delete"  : { method : "DELETE" }
+        });
     })
     .factory('Watchdog', function ($rootScope, $resource) {
-        return $resource($rootScope.baseAPIurl + '/shutdown');
+        return $resource($rootScope.baseAPIurl + '/watchdog', null, {
+            "put"     : { method : "PUT" }
+        });
     })
 ;

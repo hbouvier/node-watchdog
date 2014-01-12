@@ -13,6 +13,7 @@
         "tomahawk"     : "latest",
         "winston"      : "latest",
         "connect"      : "latest",
+        "q"            : "latest",
         "node-options" : "latest"
     },
     "engines"              : {
@@ -33,6 +34,7 @@
         "port"       : 8088,
         "headers"    : [],
         "bodyparser" : "lib/bodyparser",
-        "routes"     : "lib/routes"
+        "routes"     : "lib/routes",
+        "processes" : {}
     }
 }
