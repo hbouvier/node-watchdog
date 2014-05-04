@@ -27,6 +27,7 @@
         "start": "bin/watchdog"
     },
     "configuration"        : {
+        "install"    : false,
         "name"       : "Watchdog",
         "level"      : "verbose",
         "config"     : "watchdog.json",

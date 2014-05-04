@@ -10,6 +10,8 @@ angular.module('watchdogApplication', ['ngRoute', 'watchdogServices', 'watchdogC
     .config(['$routeProvider', '$locationProvider', function ($routeProvider, $locationProvider) {
         $routeProvider.
             when(___g_WatchDogRoutePrefix___, {controller: 'WatchdogCtrl', templateUrl: 'views/watchdog.html'}).
+            when(___g_WatchDogRoutePrefix___ + 'edit', {controller: 'WatchdogCtrl', templateUrl: 'views/editProcess.html'}).
+            when(___g_WatchDogRoutePrefix___ + 'edit/:name', {controller: 'WatchdogCtrl', templateUrl: 'views/editProcess.html'}).
             otherwise({redirectTo: ___g_WatchDogRoutePrefix___});
     }])
 ;
